@@ -8,41 +8,92 @@ using System.Collections.Generic;
 public class DebugGUI : MonoBehaviour {
 
 	///<summary>
-	/// The target output area or log for the message you are sending
+	/// The target output area or log side for the message you are sending
 	/// </summary>
 	public enum Sides { LEFT, RIGHT };
 
 	///<summary>
-	/// Coupling struct for the message and its corresponding side's area/log to be displayed on.
+	/// Coupling struct for the message, its corresponding side's area/log to be displayed on, and a custom style.
 	/// </summary>
 	private struct DebugMessage {
 		public Sides side;
 		public string message;
+		public GUIStyle style;
 
-		public DebugMessage(Sides side, string message) {
+		public DebugMessage(Sides side, string message, Color fontColor, TextAnchor anchor, int fontSize) {
 			this.side = side;
 			this.message = message;
+			this.style = new GUIStyle(GUI.skin.label); //??
+			style.fontSize = fontSize;
+			style.alignment = anchor;
+			style.normal.textColor = fontColor;
 		}
+
+		public DebugMessage(Sides side, string message, GUIStyle style) : this(side, message, style.normal.textColor, style.alignment, style.fontSize) {}
 	}
 
-	//FIXME custom inspector for showing these? how show these?
-	[SerializeField, Range(0, 50)] private static int maxMsgCountRight = 6;
-	[SerializeField, Range(0, 50)] private static int maxMsgCountLeft = 6;
+	/// <summary>
+	/// The default <see cref="label"/>  style can be overridden here. The label of the <see cref="defaultSkin"/> will get overridden too, if this is set.
+	/// </summary>
+	[SerializeField] private static GUIStyle defaultStyle;
+	/// <summary>
+	/// Custom skin to be used for all output.
+	/// </summary>
+	[SerializeField] private static GUISkin defaultSkin;
 
-	[SerializeField, Range(0, 2000)] private int msgLength = 250;
-	[SerializeField, Range(0, 1000)] private int msgHeight = 22;
-	[SerializeField, Range(0, 1000)] private int yOffset = 12;
+	private int defaultLogLength = 8;
+	private int defaultLineLength = 250;
+	private int defaultLineHeight = 22;
+	private int defaultLineSpacing = 12;
+
+	/// <summary>
+	/// The maximum number of lines in the right side log.
+	/// </summary>
+	public static int maxLogLinesRight = 8;
+	/// <summary>
+	/// The Maximum number of lines in the left side log.
+	/// </summary>
+	public static int maxLogLinesLeft = 8;
+
+	/// <summary>
+	/// Display line maximum length.
+	/// </summary>
+	[SerializeField] private int lineLength = 250;
+	/// <summary>
+	/// Display line maximum height.
+	/// </summary>
+	[SerializeField] private int lineHeight = 22;
+	/// <summary>
+	/// Spacing between output lines.
+	/// </summary>
+	[SerializeField] private int lineSpacing = 12;
 
 	private static List<DebugMessage> messageList = new List<DebugMessage>();
 	private static Queue<DebugMessage> bottomRightMsgLog = new Queue<DebugMessage>();
 	private static Queue<DebugMessage> bottomLeftMsgLog = new Queue<DebugMessage>();
 
     void Start() {
+		if (defaultSkin != null) {
+			GUI.skin = defaultSkin;
+		} else {
+			GUI.skin = new GUISkin(); //??
+		}
+		if (defaultStyle == null) {
+			defaultStyle = new GUIStyle(GUI.skin.label);
+		}
         StartCoroutine(ClearMessages());
     }
 
+	void OnValidate() {
+		if (maxLogLinesLeft < 1) { maxLogLinesLeft = defaultLogLength; }
+		if (maxLogLinesRight < 1) { maxLogLinesRight = defaultLogLength; }
+		if (lineHeight < 1) { lineHeight = defaultLineHeight; }
+		if (lineLength < 1) { lineLength = defaultLineLength; }
+		if (lineSpacing < 1) { lineSpacing = defaultLineSpacing; }
+	}
+
 	/// <summary>
-	/// Output the message to the default location of top left corner.
+	/// Output the message to the default location of top left corner with a default style.
 	/// </summary>
 	/// <seealso cref="Message(side, msgText)"/>
 	/// <param name="msgText">Message text to be displayed.</param>
@@ -51,55 +102,189 @@ public class DebugGUI : MonoBehaviour {
     }
 
 	/// <summary>
-	/// Output the message to the specified side of the top half of the screen.
+	/// Output the message to the specified side of the top half of the screen with a default style.
 	/// </summary>
-	/// <param name="side">Output side.</param>
+	/// <param name="side">Output side</param>
 	/// <param name="msgText">Message text to be displayed.</param>
 	public static void Message(Sides side, string msgText) {
-		messageList.Add(new DebugMessage(side, msgText));
+		Message(side, msgText, defaultStyle.normal.textColor, defaultStyle.alignment, defaultStyle.fontSize);
 	}
 
 	/// <summary>
-	/// Log the message to the specified log / side.
+	/// Message to the specified side with custom fontColor, alignment / anchor and fontSize.
 	/// </summary>
-	/// <seealso cref="Log(side, msgText, maxMsgCount)"/>
-	/// <param name="side">Log Side.</param>
-	/// <param name="msgText">Message text to be logged.</param>
-	public static void Log(Sides side, string msgText) {
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Message(Sides side, string msgText, Color fontColor, TextAnchor alignment, int fontSize) {
+		messageList.Add(new DebugMessage(side, msgText, defaultStyle));
+	}
+
+	/// <summary>
+	/// Message to the specified side with custom fontColor and alignment / anchor.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	public static void Message(Sides side, string msgText, Color fontColor, TextAnchor alignment) {
+		Message(side, msgText, fontColor, alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Message to the specified side with custom fontColor.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	public static void Message(Sides side, string msgText, Color fontColor) {
+		Message(side, msgText, fontColor, defaultStyle.alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Message to the specified side with custom fontColor and fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Message(Sides side, string msgText, Color fontColor, int fontSize) {
+		Message(side, msgText, fontColor, defaultStyle.alignment, fontSize);
+	}
+
+	/// <summary>
+	/// Message to the specified side with custom alignment / anchor.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	public static void Message(Sides side, string msgText, TextAnchor alignment) {
+		Message(side, msgText, defaultStyle.normal.textColor, alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Message to the specified side with custom alignment / anchor and fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Message(Sides side, string msgText, TextAnchor alignment, int fontSize) {
+		Message(side, msgText, defaultStyle.normal.textColor, alignment, fontSize);
+	}
+
+	/// <summary>
+	/// Message to the specified side with custom fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Message(Sides side, string msgText, int fontSize) {
+		Message(side, msgText, defaultStyle.normal.textColor, defaultStyle.alignment, fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom fontColor, alignment / anchor and fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Log(Sides side, string msgText, Color fontColor, TextAnchor alignment, int fontSize) {
 		if (side == Sides.RIGHT) {
-			if (bottomRightMsgLog.Count < maxMsgCountRight) {
-				bottomRightMsgLog.Enqueue(new DebugMessage(side, msgText));
+			if (bottomRightMsgLog.Count < maxLogLinesRight) {
+				bottomRightMsgLog.Enqueue(new DebugMessage(side, msgText, defaultStyle));
 			} else {
-				while (bottomRightMsgLog.Count >= maxMsgCountRight) {
+				while (bottomRightMsgLog.Count >= maxLogLinesRight) {
 					bottomRightMsgLog.Dequeue();
 				}
-				bottomRightMsgLog.Enqueue(new DebugMessage(side, msgText));
+				bottomRightMsgLog.Enqueue(new DebugMessage(side, msgText, defaultStyle));
 			}
 		} else {
-			if (bottomLeftMsgLog.Count < maxMsgCountLeft) {
-				bottomLeftMsgLog.Enqueue(new DebugMessage(side, msgText));
+			if (bottomLeftMsgLog.Count < maxLogLinesLeft) {
+				bottomLeftMsgLog.Enqueue(new DebugMessage(side, msgText, defaultStyle));
 			} else {
-				while (bottomLeftMsgLog.Count >= maxMsgCountLeft) {
+				while (bottomLeftMsgLog.Count >= maxLogLinesLeft) {
 					bottomLeftMsgLog.Dequeue();
 				}
-				bottomLeftMsgLog.Enqueue(new DebugMessage(side, msgText));
+				bottomLeftMsgLog.Enqueue(new DebugMessage(side, msgText, defaultStyle));
 			}
 		}
 	}
 
 	/// <summary>
-	/// Log the message to the specified log / side and set the log max-length to the specified number.
+	/// Log message to the specified side with default style.
 	/// </summary>
-	/// <param name="side">Log Side.</param>
-	/// <param name="msgText">Message text to be logged.</param>
-	/// <param name="maxLogLength">Max length of the log.</param>
-	public static void Log(Sides side, string msgText, int maxLogLength) {
-		if (side == Sides.RIGHT) {
-			maxMsgCountRight = maxLogLength;
-		} else {
-			maxMsgCountLeft = maxLogLength;
-		}
-		Log(side, msgText);
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	public static void Log(Sides side, string msgText) {
+		Log(side, msgText, defaultStyle.normal.textColor, defaultStyle.alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom fontColor.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	public static void Log(Sides side, string msgText, Color fontColor) {
+		Log(side, msgText, fontColor, defaultStyle.alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom fontColor and alignment / anchor.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	public static void Log(Sides side, string msgText, Color fontColor, TextAnchor alignment) {
+		Log(side, msgText, fontColor, alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom fontColor and fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontColor">Font color.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Log(Sides side, string msgText, Color fontColor, int fontSize) {
+		Log(side, msgText, fontColor, defaultStyle.alignment, fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom alignment / anchor.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	public static void Log(Sides side, string msgText, TextAnchor alignment) {
+		Log(side, msgText, defaultStyle.normal.textColor, alignment, defaultStyle.fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom alignment / anchor and fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="alignment">alignment / anchor.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Log(Sides side, string msgText, TextAnchor alignment, int fontSize) {
+		Log(side, msgText, defaultStyle.normal.textColor, alignment, fontSize);
+	}
+
+	/// <summary>
+	/// Log message to the specified side with custom fontSize.
+	/// </summary>
+	/// <param name="side">Side.</param>
+	/// <param name="msgText">Message text.</param>
+	/// <param name="fontSize">Font size.</param>
+	public static void Log(Sides side, string msgText, int fontSize) {
+		Log(side, msgText, defaultStyle.normal.textColor, defaultStyle.alignment, fontSize);
 	}
 
     void OnGUI() {
@@ -109,11 +294,11 @@ public class DebugGUI : MonoBehaviour {
 			Rect area = new Rect();
 			foreach(DebugMessage msg in messageList) {
 				if (msg.side == Sides.LEFT) {
-					area = new Rect(0, loopCount_TL++ * yOffset, msgLength, msgHeight);
+					area = new Rect(0, loopCount_TL++ * lineSpacing, lineLength, lineHeight);
 				} else if (msg.side == Sides.RIGHT) {
-					area = new Rect(Screen.width - msgLength, loopCount_TR++ * yOffset, msgLength, msgHeight);
+					area = new Rect(Screen.width - lineLength, loopCount_TR++ * lineSpacing, lineLength, lineHeight);
 				}
-				GUI.Label(area, msg.message);
+				GUI.Label(area, msg.message, msg.style);
 			}
         }
 
@@ -122,8 +307,8 @@ public class DebugGUI : MonoBehaviour {
 			Rect area = new Rect();
 
 			foreach(DebugMessage msg in bottomRightMsgLog) {
-				area = new Rect(Screen.width - msgLength, (Screen.height - (maxMsgCountLeft * msgHeight)) + (loopCount++ * msgHeight), msgLength, msgHeight);
-				GUI.Label(area, msg.message);
+				area = new Rect(Screen.width - lineLength, (Screen.height - (maxLogLinesLeft * lineHeight)) + (loopCount++ * lineHeight), lineLength, lineHeight);
+				GUI.Label(area, msg.message, msg.style);
 			}
 		}
 
@@ -132,8 +317,8 @@ public class DebugGUI : MonoBehaviour {
 			Rect area = new Rect();
 			
 			foreach(DebugMessage msg in bottomLeftMsgLog) {
-				area = new Rect(0, (Screen.height - (maxMsgCountLeft * msgHeight)) + (loopCount++ * msgHeight), msgLength, msgHeight);
-				GUI.Label(area, msg.message);
+				area = new Rect(0, (Screen.height - (maxLogLinesLeft * lineHeight)) + (loopCount++ * lineHeight), lineLength, lineHeight);
+				GUI.Label(area, msg.message, msg.style);
 			}
 		}
     }
