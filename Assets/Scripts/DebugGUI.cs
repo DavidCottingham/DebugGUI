@@ -10,27 +10,28 @@ public class DebugGUI : MonoBehaviour {
 	///<summary>
 	/// The target output area or log side for the message you are sending
 	/// </summary>
-	public enum Sides { LEFT, RIGHT };
+	public enum MessageArea { TOP_LEFT = 0, TOP_RIGHT = 1, BOTTOM_LEFT = 2, BOTTOM_RIGHT = 3 };
+	public enum AreaType { MESSAGE, LOG };
 
 	///<summary>
 	/// Grouping struct for the message, its corresponding side's area/log to be displayed on, and a custom style.
 	/// </summary>
 	private struct DebugMessage {
-		public Sides side;
+		public MessageArea area;
 		public string message;
 		public Color fontColor;
 		public TextAnchor alignment;
 		public int fontSize;
 
-		public DebugMessage(Sides side, string message, Color fontColor, TextAnchor alignment, int fontSize) {
-			this.side = side;
+		public DebugMessage(MessageArea area, string message, Color fontColor, TextAnchor alignment, int fontSize) {
+			this.area = area;
 			this.message = message;
 			this.fontSize = fontSize;
 			this.alignment = alignment;
 			this.fontColor = fontColor;
 		}
 
-		public DebugMessage(Sides side, string message, GUIStyle style) : this(side, message, style.normal.textColor, style.alignment, style.fontSize) {}
+		public DebugMessage(MessageArea area, string message, GUIStyle style) : this(area, message, style.normal.textColor, style.alignment, style.fontSize) {}
 	}
 
 	private static DebugGUI instance;
@@ -92,12 +93,23 @@ public class DebugGUI : MonoBehaviour {
 	/// </summary>
 	public int lineSpacing = 14;
 
-	private List<DebugMessage> messageList = new List<DebugMessage>();
-	private Queue<DebugMessage> bottomRightMsgLog = new Queue<DebugMessage>();
-	private Queue<DebugMessage> bottomLeftMsgLog = new Queue<DebugMessage>();
+	//private List<DebugMessage> messageList = new List<DebugMessage>();
+	//private Queue<DebugMessage> bottomRightMsgLog = new Queue<DebugMessage>();
+	//private Queue<DebugMessage> bottomLeftMsgLog = new Queue<DebugMessage>();
+
+	private OutputAreaSettings[] outputs = new OutputAreaSettings[4];
+
+	private OutputAreaSettings topLeft = new OutputAreaSettings();
+	private OutputAreaSettings topRight = new OutputAreaSettings();
+	private OutputAreaSettings bottomLeft = new OutputAreaSettings();
+	private OutputAreaSettings bottomRight = new OutputAreaSettings();
 
     void Start() {
         StartCoroutine(ClearMessages());
+		outputs[(int) MessageArea.TOP_LEFT] = topLeft;
+		outputs[(int) MessageArea.TOP_RIGHT] = topRight;
+		outputs[(int) MessageArea.BOTTOM_LEFT] = bottomLeft;
+		outputs[(int) MessageArea.BOTTOM_RIGHT] = bottomRight;
     }
 
 	void OnValidate() {
@@ -114,7 +126,7 @@ public class DebugGUI : MonoBehaviour {
 	/// <seealso cref="Message(side, msgText)"/>
 	/// <param name="msgText">Message text to be displayed.</param>
     public void Message(string msgText) {
-		Message(Sides.LEFT, msgText);
+		Message(MessageArea.TOP_LEFT, msgText);
     }
 
 	/// <summary>
@@ -122,8 +134,8 @@ public class DebugGUI : MonoBehaviour {
 	/// </summary>
 	/// <param name="side">Output side</param>
 	/// <param name="msgText">Message text to be displayed.</param>
-	public void Message(Sides side, string msgText) {
-		Message(side, msgText, sharedStyle.normal.textColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
+	public void Message(MessageArea area, string msgText) {
+		Message(area, msgText, sharedStyle.normal.textColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
 		//Message(side, msgText, defaultColor, defaultAlignment, defaultFontSize);
 	}
 
@@ -135,8 +147,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="fontColor">Font color.</param>
 	/// <param name="alignment">alignment / anchor.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Message(Sides side, string msgText, Color fontColor, TextAnchor alignment, int fontSize) {
-		messageList.Add(new DebugMessage(side, msgText, fontColor, alignment, fontSize));
+	public void Message(MessageArea area, string msgText, Color fontColor, TextAnchor alignment, int fontSize) {
+		messageList.Add(new DebugMessage(area, msgText, fontColor, alignment, fontSize));
 	}
 
 	/// <summary>
@@ -146,9 +158,9 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontColor">Font color.</param>
 	/// <param name="alignment">alignment / anchor.</param>
-	public void Message(Sides side, string msgText, Color fontColor, TextAnchor alignment) {
+	public void Message(MessageArea area, string msgText, Color fontColor, TextAnchor alignment) {
 		//Message(side, msgText, fontColor, alignment, defaultFontSize);
-		Message(side, msgText, fontColor, alignment, sharedStyle.fontSize);
+		Message(area, msgText, fontColor, alignment, sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -157,9 +169,9 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontColor">Font color.</param>
-	public void Message(Sides side, string msgText, Color fontColor) {
+	public void Message(MessageArea area, string msgText, Color fontColor) {
 		//Message(side, msgText, fontColor, defaultAlignment, defaultFontSize);
-		Message(side, msgText, fontColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
+		Message(area, msgText, fontColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -169,9 +181,9 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontColor">Font color.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Message(Sides side, string msgText, Color fontColor, int fontSize) {
+	public void Message(MessageArea area, string msgText, Color fontColor, int fontSize) {
 		//Message(side, msgText, fontColor, defaultAlignment, fontSize);
-		Message(side, msgText, fontColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), fontSize);
+		Message(area, msgText, fontColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), fontSize);
 	}
 
 	/// <summary>
@@ -180,9 +192,9 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
 	/// <param name="alignment">alignment / anchor.</param>
-	public void Message(Sides side, string msgText, TextAnchor alignment) {
+	public void Message(MessageArea area, string msgText, TextAnchor alignment) {
 		//Message(side, msgText, defaultColor, alignment, defaultFontSize);
-		Message(side, msgText, sharedStyle.normal.textColor, alignment, sharedStyle.fontSize);
+		Message(area, msgText, sharedStyle.normal.textColor, alignment, sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -192,9 +204,9 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="msgText">Message text.</param>
 	/// <param name="alignment">alignment / anchor.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Message(Sides side, string msgText, TextAnchor alignment, int fontSize) {
+	public void Message(MessageArea area, string msgText, TextAnchor alignment, int fontSize) {
 		//Message(side, msgText, defaultColor, alignment, fontSize);
-		Message(side, msgText, sharedStyle.normal.textColor, alignment, fontSize);
+		Message(area, msgText, sharedStyle.normal.textColor, alignment, fontSize);
 	}
 
 	/// <summary>
@@ -203,9 +215,9 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Message(Sides side, string msgText, int fontSize) {
+	public void Message(MessageArea area, string msgText, int fontSize) {
 		//Message(side, msgText, defaultColor, defaultAlignment, fontSize);
-		Message(side, msgText, sharedStyle.normal.textColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), fontSize);
+		Message(area, msgText, sharedStyle.normal.textColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), fontSize);
 	}
 
 	/// <summary>
@@ -216,24 +228,24 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="fontColor">Font color.</param>
 	/// <param name="alignment">alignment / anchor.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Log(Sides side, string msgText, Color fontColor, TextAnchor alignment, int fontSize) {
-		if (side == Sides.RIGHT) {
+	public void Log(MessageArea area, string msgText, Color fontColor, TextAnchor alignment, int fontSize) {
+		if (area == MessageArea.TOP_RIGHT) {
 			if (bottomRightMsgLog.Count < maxLogLinesRight) {
-				bottomRightMsgLog.Enqueue(new DebugMessage(side, msgText, fontColor, alignment, fontSize));
+				bottomRightMsgLog.Enqueue(new DebugMessage(area, msgText, fontColor, alignment, fontSize));
 			} else {
 				while (bottomRightMsgLog.Count >= maxLogLinesRight) {
 					bottomRightMsgLog.Dequeue();
 				}
-				bottomRightMsgLog.Enqueue(new DebugMessage(side, msgText, fontColor, alignment, fontSize));
+				bottomRightMsgLog.Enqueue(new DebugMessage(area, msgText, fontColor, alignment, fontSize));
 			}
 		} else {
 			if (bottomLeftMsgLog.Count < maxLogLinesLeft) {
-				bottomLeftMsgLog.Enqueue(new DebugMessage(side, msgText, fontColor, alignment, fontSize));
+				bottomLeftMsgLog.Enqueue(new DebugMessage(area, msgText, fontColor, alignment, fontSize));
 			} else {
 				while (bottomLeftMsgLog.Count >= maxLogLinesLeft) {
 					bottomLeftMsgLog.Dequeue();
 				}
-				bottomLeftMsgLog.Enqueue(new DebugMessage(side, msgText, fontColor, alignment, fontSize));
+				bottomLeftMsgLog.Enqueue(new DebugMessage(area, msgText, fontColor, alignment, fontSize));
 			}
 		}
 	}
@@ -243,8 +255,8 @@ public class DebugGUI : MonoBehaviour {
 	/// </summary>
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
-	public void Log(Sides side, string msgText) {
-		Log(side, msgText, sharedStyle.normal.textColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
+	public void Log(MessageArea area, string msgText) {
+		Log(area, msgText, sharedStyle.normal.textColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -253,8 +265,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontColor">Font color.</param>
-	public void Log(Sides side, string msgText, Color fontColor) {
-		Log(side, msgText, fontColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
+	public void Log(MessageArea area, string msgText, Color fontColor) {
+		Log(area, msgText, fontColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -264,8 +276,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontColor">Font color.</param>
 	/// <param name="alignment">alignment / anchor.</param>
-	public void Log(Sides side, string msgText, Color fontColor, TextAnchor alignment) {
-		Log(side, msgText, fontColor, alignment, sharedStyle.fontSize);
+	public void Log(MessageArea area, string msgText, Color fontColor, TextAnchor alignment) {
+		Log(area, msgText, fontColor, alignment, sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -275,8 +287,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontColor">Font color.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Log(Sides side, string msgText, Color fontColor, int fontSize) {
-		Log(side, msgText, fontColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), fontSize);
+	public void Log(MessageArea area, string msgText, Color fontColor, int fontSize) {
+		Log(area, msgText, fontColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), fontSize);
 	}
 
 	/// <summary>
@@ -285,8 +297,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
 	/// <param name="alignment">alignment / anchor.</param>
-	public void Log(Sides side, string msgText, TextAnchor alignment) {
-		Log(side, msgText, sharedStyle.normal.textColor, alignment, sharedStyle.fontSize);
+	public void Log(MessageArea area, string msgText, TextAnchor alignment) {
+		Log(area, msgText, sharedStyle.normal.textColor, alignment, sharedStyle.fontSize);
 	}
 
 	/// <summary>
@@ -296,8 +308,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="msgText">Message text.</param>
 	/// <param name="alignment">alignment / anchor.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Log(Sides side, string msgText, TextAnchor alignment, int fontSize) {
-		Log(side, msgText, sharedStyle.normal.textColor, alignment, fontSize);
+	public void Log(MessageArea area, string msgText, TextAnchor alignment, int fontSize) {
+		Log(area, msgText, sharedStyle.normal.textColor, alignment, fontSize);
 	}
 
 	/// <summary>
@@ -306,8 +318,8 @@ public class DebugGUI : MonoBehaviour {
 	/// <param name="side">Side.</param>
 	/// <param name="msgText">Message text.</param>
 	/// <param name="fontSize">Font size.</param>
-	public void Log(Sides side, string msgText, int fontSize) {
-		Log(side, msgText, sharedStyle.normal.textColor, (side == Sides.LEFT ? leftSideAlign : rightSideAlign), fontSize);
+	public void Log(MessageArea area, string msgText, int fontSize) {
+		Log(area, msgText, sharedStyle.normal.textColor, (area == MessageArea.TOP_LEFT ? leftSideAlign : rightSideAlign), fontSize);
 	}
 
     void OnGUI() {
@@ -326,9 +338,9 @@ public class DebugGUI : MonoBehaviour {
 				msgStyle.fontSize = msg.fontSize;
 				msgStyle.alignment = msg.alignment;
 
-				if (msg.side == Sides.LEFT) {
+				if (msg.area == MessageArea.TOP_LEFT) {
 					msgArea = new Rect(0, loopCount_TL++ * lineSpacing, lineLength, lineHeight);
-				} else if (msg.side == Sides.RIGHT) {
+				} else if (msg.area == MessageArea.TOP_RIGHT) {
 					msgArea = new Rect(Screen.width - lineLength, loopCount_TR++ * lineSpacing, lineLength, lineHeight);
 					msgStyle.alignment = rightSideAlign;
 					if (msg.alignment != rightSideAlign) {
@@ -380,4 +392,58 @@ public class DebugGUI : MonoBehaviour {
 			messageList.Clear();
 		}
     }
+
+	private class OutputAreaSettings {
+
+		private ICollection messages;
+		private MessageArea area; //needed in class?
+		public MessageArea Area { get { return area; } }
+		public GUIStyle msgStyle;
+
+		/// <summary>
+		/// The maximum number of lines in the right side log.
+		/// </summary>
+		public int maxLogLinesRight = 8;
+		/// <summary>
+		/// The Maximum number of lines in the left side log.
+		/// </summary>
+		public int maxLogLinesLeft = 8;
+		
+		/// <summary>
+		/// Display line maximum length.
+		/// </summary>
+		public int lineLength = 250;
+		/// <summary>
+		/// Display line maximum height.
+		/// </summary>
+		public int lineHeight = 22;
+		/// <summary>
+		/// Spacing between output lines.
+		/// </summary>
+		public int lineSpacing = 14;
+
+		public OutputAreaSettings(AreaType type) {
+			switch (type) {
+			case AreaType.LOG :
+				messages = new Queue<DebugMessage>();
+				break;
+			case AreaType.MESSAGE :
+				messages = new List<DebugMessage>();
+				break;
+			default :
+				messages = new List<DebugMessage>();
+				break;
+			}
+		}
+
+		public OutputAreaSettings() : this(AreaType.MESSAGE) {}
+
+		public void ChangeType(AreaType type) {
+			if (type == AreaType.MESSAGE && messages.GetType(typeof(Queue))) {
+				messages = new List<DebugMessage>(messages);
+			} else if (type == AreaType.LOG && messages.GetType(typeof(System.Collections.Generic.List))) {
+				messages = new Queue<DebugMessage>(messages);
+			}
+		}
+	}
 }
